@@ -1,0 +1,5 @@
+data_bci
+.ipynb_checkpoints
+__pycache__
+*.pdf
+
