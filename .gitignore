@@ -2,4 +2,4 @@
 __pycache__
 *.pdf
 data_bci
-data/cifar/
+data/
