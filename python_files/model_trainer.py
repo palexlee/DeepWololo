@@ -10,6 +10,8 @@ from history import History
 import numpy as np
 import copy
 
+from torch.utils.data import DataLoader
+
 class ModelTrainer(object):
     """Utility class to train models. Compatible with SimpleNet and PyTorch models.
     Usage:
@@ -54,6 +56,7 @@ class ModelTrainer(object):
             #or bathNorm to apply
             self.model.train(True)
             
+            
             idxs = torch.randperm(x_train.shape[0])
             if(x_train.is_cuda): 
                 idxs = idxs.cuda()
@@ -81,12 +84,14 @@ class ModelTrainer(object):
             
             if validation_data is not None:
                 #Disable training mode
-                self.model.train(False)
-                
-                x_test, y_test = validation_data
-                y_hat = self.model(x_test)
-                val_loss = self.criterion(*self.criterion_fun(y_hat, y_test)).item()/len(x_test)
-                val_acc = (self.y_hat_fun(y_hat)==y_test).float().sum().item()/len(x_test)
+                #self.model.train(False)
+                with torch.no_grad():
+                    self.model.eval()
+
+                    x_test, y_test = validation_data
+                    y_hat = self.model(x_test)
+                    val_loss = self.criterion(*self.criterion_fun(y_hat, y_test)).item()/len(x_test)
+                    val_acc = (self.y_hat_fun(y_hat)==y_test).float().sum().item()/len(x_test)
                 
             
             self.history.add([
@@ -117,3 +122,4 @@ class ModelTrainer(object):
             print("Train model first!")
         else:
             self.history.plot(title, avg_w_size)
+    
