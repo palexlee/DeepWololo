@@ -12,7 +12,6 @@ from model_trainer import ModelTrainer
 from history import History
 from data_import import *
 from nn_modules import *
-from utils import *
 
 #######################################################################################
 def sample(features, targets, split=5):

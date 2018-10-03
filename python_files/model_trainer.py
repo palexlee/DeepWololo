@@ -66,21 +66,17 @@ class ModelTrainer(object):
             train_loss = 0
             for batch in idxs:
                 self.optimizer.zero_grad()
-                #torch.cuda.synchronize()
                 y_hat = self.model(x_train[batch])
-                #torch.cuda.synchronize()
                 loss = self.criterion(*self.criterion_fun(y_hat, y_train[batch]))
-                #torch.cuda.synchronize()
                 loss.backward()
-                #torch.cuda.synchronize()
                 self.optimizer.step()
-                #torch.cuda.synchronize()
-                train_correct += (self.y_hat_fun(y_hat) == y_train[batch]).sum()
-                #torch.cuda.synchronize()
-                train_loss += loss
+                
+                with torch.no_grad():
+                    train_correct += (self.y_hat_fun(y_hat) == y_train[batch]).sum()
+                    train_loss += loss
             
-            val_loss = np.nan
-            val_acc = np.nan
+                    val_loss = np.nan
+                    val_acc = np.nan
             
             if validation_data is not None:
                 #Disable training mode
@@ -93,14 +89,13 @@ class ModelTrainer(object):
                     val_loss = self.criterion(*self.criterion_fun(y_hat, y_test)).item()/len(x_test)
                     val_acc = (self.y_hat_fun(y_hat)==y_test).float().sum().item()/len(x_test)
                 
-            
-            self.history.add([
+            self.history.add([                    
                 train_loss.item()/x_train.shape[0],
                 train_correct.item()/x_train.shape[0],
                 val_loss,
                 val_acc
             ])
-            
+
             if verbose != 0 and epoch%verbose == 0:
                 if epoch==0:
                     print("******************************** Train log ************************************")
