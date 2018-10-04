@@ -59,14 +59,25 @@ def computeClassesWeights(labels):
 
 #######################################################################################
 
-def spyOn(models, names, verbose=False):
-    if (len(models) != len(names)):
-        print("The names array must have the same lengths as the models array")
+def spyOn(layers, names, verbose=False):
+    """Add hooks to the specified layers to capture their outputs.
+    The outputs are stored in a dict(), with the names given as keys.
+    Args: 
+    -layers  : Array containing the model layers to spy on.
+    -names   : Array containing the names of the layer, to be used as keys in the returned dicts
+    -verbose : Boolean, if set to True each hook will display a message when activated.
+    Returns:
+    Two dict()
+    -the first where the outputs captured by the hooks will be stored.
+    -The second one where the hooks handles will be stored.
+    """
+    if (len(layers) != len(names)):
+        print("The names array must have the same lengths as the layers array")
         
     output_dict = dict()
     handle_dict = dict()
     
-    for i, model in enumerate(models):
+    for i, layer in enumerate(layers):
         
         def make_f(n):
             def f(m, input_, output_): 
@@ -75,6 +86,6 @@ def spyOn(models, names, verbose=False):
                     print("captured output at layer : "+str(m)) 
             return f
         
-        handle_dict[names[i]] = model.register_forward_hook(make_f(names[i]))
+        handle_dict[names[i]] = layer.register_forward_hook(make_f(names[i]))
         
     return output_dict, handle_dict
