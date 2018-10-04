@@ -5,7 +5,7 @@ from torchvision import datasets
 import argparse
 import os
 
-from utils import spyOn
+from utils import spyOn, remove_spying
 
 ######################################################################
 
@@ -176,8 +176,8 @@ def get_snapshots_f(model, layers, layer_names, data):
                 outputs = output
             else:
                 outputs = torch.cat((outputs, output), 0)
-            
-        handle_d.remove()
+        
+        remove_spying(handle_d)
                 
         return outputs
 
