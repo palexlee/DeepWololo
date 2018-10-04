@@ -138,7 +138,23 @@ def load_data(cifar = None, one_hot_labels = False, normalize = False, flatten =
     return train_input, train_target, test_input, test_target
 
 
-def generate_newdataset(train_dataset, test_dataset, split=0.7, full=False):
+######################################################################
+
+def generate_newdataset(train_dataset, test_dataset, split=0.7):
+    """
+    Generate the new dataset containing a mix of the train_dataset and the test_dataset.
+    A target will have value '1' if the original data is from the train set, '0' if it 
+    is from the test set.
+    Args:
+    -train_dataset: train_dataset
+    -test_dataset: test_dataset
+    -split: percentage of the data to keep for the new trainset
+    Returns:
+    -g_train_input: new train_input
+    -g_train_target: new train_target
+    -g_test_input: new test_input
+    -g_test_target: new test_target
+    """
     train_input = train_dataset[0]
     train_target = train_dataset[1]
     test_input = test_dataset[0]
@@ -161,12 +177,21 @@ def generate_newdataset(train_dataset, test_dataset, split=0.7, full=False):
     
 
 def get_snapshots_f(model, layers, layer_names, data):
+    """
+    Get a snapshot of the given layers when the model is doing the forward pass on the data.
+    Args:
+    -model : model 
+    -layers : Array containing the model layers to spy on
+    -layer_names : Array containing the names of the layer, to be used as keys in the returned dicts
+    -data : data to feed the model
+    Returns:
+    -outpus: values spied from the layers
+    """
     with torch.no_grad():
         model.eval()
         
-        idxs = torch.randperm(data.shape[0])
         output_d, handle_d = spyOn(layers, layer_names)
-        _ = model(data[idxs])
+        _ = model(data)
         
         outputs = None
         
@@ -182,9 +207,18 @@ def get_snapshots_f(model, layers, layer_names, data):
         return outputs
 
 def generate_dataset_g(model, train_dataset, test_dataset, layers, layer_names, split=0.7):
+    """
+    Generate the dataset for g with the values spied from the given layers as input and the
+    labels taking value '1' if the original data was part of the train set, '0' otherwise.
+    Args:
+    
+    """
     new_train_input, new_train_target, new_test_input, new_test_target = generate_newdataset(train_dataset, test_dataset, split)
     
     g_train_input = get_snapshots_f(model, layers, layer_names, new_train_input)
     g_test_input = get_snapshots_f(model, layers, layer_names, new_test_input)
     
     return (g_train_input, new_train_target), (g_test_input, new_test_target)
+
+
+######################################################################
