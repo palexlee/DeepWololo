@@ -89,3 +89,12 @@ def spyOn(layers, names, verbose=False):
         handle_dict[names[i]] = layer.register_forward_hook(make_f(names[i]))
         
     return output_dict, handle_dict
+
+def remove_spying(handles_dict):
+    """given a dict() of handles, remove all of them.
+    Args: 
+    -handles_dict : dict of handles to remove."""
+    for h in list(handles_dict.values()):
+        h.remove()
+        
+#######################################################################################
