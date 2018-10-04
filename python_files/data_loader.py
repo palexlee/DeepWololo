@@ -52,7 +52,8 @@ def convert_to_one_hot_labels(input, target):
     tmp.scatter_(1, target.view(-1, 1), 1.0)
     return tmp
 
-def load_data(cifar = None, one_hot_labels = False, normalize = False, flatten = True):
+def load_data(cifar = None, one_hot_labels = False, normalize = False, flatten = True, full=False):
+    args.full = full
 
     if args.data_dir is not None:
         data_dir = args.data_dir
