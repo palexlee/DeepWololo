@@ -5,6 +5,8 @@ from torchvision import datasets
 import argparse
 import os
 
+from utils import spyOn
+
 ######################################################################
 
 parser = argparse.ArgumentParser(description='DLC prologue file for practical sessions.')
@@ -134,3 +136,55 @@ def load_data(cifar = None, one_hot_labels = False, normalize = False, flatten =
         test_input.sub_(mu).div_(std)
 
     return train_input, train_target, test_input, test_target
+
+
+def generate_newdataset(train_dataset, test_dataset, split=0.7, full=False):
+    train_input = train_dataset[0]
+    train_target = train_dataset[1]
+    test_input = test_dataset[0]
+    test_target = test_dataset[1]
+    
+    N_train = int(0.7* len(train_input))
+    N_test = int(0.7 * len(test_input))
+    
+    g_train_input = torch.cat((train_input[:N_train], test_input[:N_test]), 0)
+    g_train_target = torch.cat((torch.ones(N_train), torch.zeros(N_test)), 0)
+    g_test_input = torch.cat((train_input[N_train:], test_input[N_test:]), 0)
+    g_test_target = torch.cat((torch.ones(len(train_input) - N_train), torch.zeros(len(test_input) - N_test)), 0)
+    
+    if train_input.is_cuda:
+        g_train_target = g_train_target.cuda()
+        g_test_target = g_test_target.cuda()
+    
+    return g_train_input, g_train_target, g_test_input, g_test_target
+    
+    
+
+def get_snapshots_f(model, layers, layer_names, data):
+    with torch.no_grad():
+        model.eval()
+        
+        idxs = torch.randperm(data.shape[0])
+        output_d, handle_d = spyOn(layers, layer_names)
+        _ = model(data[idxs])
+        
+        outputs = None
+        
+        for name in layer_names:
+            output = output_d[name].reshape(data.shape[0], -1)
+            if outputs is None:
+                outputs = output
+            else:
+                outputs = torch.cat((outputs, output), 0)
+            
+        handle_d.remove()
+                
+        return outputs
+
+def generate_dataset_g(model, train_dataset, test_dataset, layers, layer_names, split=0.7):
+    new_train_input, new_train_target, new_test_input, new_test_target = generate_newdataset(train_dataset, test_dataset, split)
+    
+    g_train_input = get_snapshots_f(model, layers, layer_names, new_train_input)
+    g_test_input = get_snapshots_f(model, layers, layer_names, new_test_input)
+    
+    return (g_train_input, new_train_target), (g_test_input, new_test_target)
