@@ -12,6 +12,8 @@ import copy
 
 from torch.utils.data import DataLoader
 
+from tensorboardX import SummaryWriter
+
 class ModelTrainer(object):
     """Utility class to train models. Compatible with SimpleNet and PyTorch models.
     Usage:
@@ -36,6 +38,7 @@ class ModelTrainer(object):
         self.y_hat_fun = y_hat_fun
         self.criterion_fun = criterion_fun
         self.best_model = None
+        self.writer = SummaryWriter()
             
     def fit(self, train_data, validation_data=None, epochs=25, batch_size=None, verbose=1):
         """Fit the model on the training data.
@@ -88,6 +91,15 @@ class ModelTrainer(object):
                     y_hat = self.model(x_test)
                     val_loss = self.criterion(*self.criterion_fun(y_hat, y_test)).item()/len(x_test)
                     val_acc = (self.y_hat_fun(y_hat)==y_test).float().sum().item()/len(x_test)
+                    
+            for name, param in self.model.named_parameters():
+                self.writer.add_histogram(name, param.clone().cpu().data.numpy(), epoch)
+                
+            self.writer.add_scalar('Train/Loss', train_loss.item()/x_train.shape[0], epoch)
+            self.writer.add_scalar('Train/Accuracy', train_correct.item()/x_train.shape[0], epoch)
+            self.writer.add_scalar('Eval/Loss', val_loss, epoch)
+            self.writer.add_scalar('Eval/Accuracy', val_acc, epoch)
+
                 
             self.history.add([                    
                 train_loss.item()/x_train.shape[0],
