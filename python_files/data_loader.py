@@ -180,12 +180,12 @@ def get_snapshots_f(model, layers, layer_names, data):
     """
     Get a snapshot of the given layers when the model is doing the forward pass on the data.
     Args:
-    -model : model 
+    -model : Model 
     -layers : Array containing the model layers to spy on
     -layer_names : Array containing the names of the layer, to be used as keys in the returned dicts
-    -data : data to feed the model
+    -data : Data to feed the model
     Returns:
-    -outpus: values spied from the layers
+    -outpus: Array of values spied from the layers
     """
     with torch.no_grad():
         model.eval()
@@ -211,7 +211,15 @@ def generate_dataset_g(model, train_dataset, test_dataset, layers, layer_names, 
     Generate the dataset for g with the values spied from the given layers as input and the
     labels taking value '1' if the original data was part of the train set, '0' otherwise.
     Args:
-    
+    -model : model to spy
+    -train_dataset: original train dataset
+    -test_dataset: original test dataset
+    -layers: Array containing the model layers to spy on
+    -layer_name: Array containing the names of the layer, to be used as keys in the returned
+    -split: Percentage of data to keep for the new train dataset
+    Returns:
+    -new train dataset
+    -new test dataset
     """
     new_train_input, new_train_target, new_test_input, new_test_target = generate_newdataset(train_dataset, test_dataset, split)
     
