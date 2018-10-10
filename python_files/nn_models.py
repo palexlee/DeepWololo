@@ -41,7 +41,7 @@ class aliG(nn.Module):
         self.reshape = View([-1])
         self.fc1 = nn.Linear(16*self.finalVectorSize, 100)
         self.fc2 = nn.Linear(100, 32)
-        self.fc3 = nn.Linear(32, 1)
+        self.fc3 = nn.Linear(32, 2)
 
     def forward(self, x):
         x = F.relu(self.maxpool1(self.conv1(x)))
