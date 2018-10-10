@@ -75,7 +75,7 @@ class ModelTrainer(object):
                 self.optimizer.step()
                 
                 with torch.no_grad():
-                    train_correct += (self.y_hat_fun(y_hat) == y_train[batch]).sum()
+                    train_correct += (self.y_hat_fun(y_hat) == y_train[batch]).float().sum()
                     train_loss += loss
             
                     val_loss = np.nan

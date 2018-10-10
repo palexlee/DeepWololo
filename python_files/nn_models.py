@@ -41,7 +41,7 @@ class aliG(nn.Module):
         self.reshape = View([-1])
         self.fc1 = nn.Linear(16*self.finalVectorSize, 100)
         self.fc2 = nn.Linear(100, 32)
-        self.fc3 = nn.Linear(32, 2)
+        self.fc3 = nn.Linear(32, 1)
 
     def forward(self, x):
         x = F.relu(self.maxpool1(self.conv1(x)))
@@ -50,6 +50,6 @@ class aliG(nn.Module):
         x = self.reshape(x)
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
-        x = self.fc3(x)
+        x = torch.sigmoid(self.fc3(x))
         return x
     

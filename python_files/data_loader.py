@@ -226,7 +226,7 @@ def generate_dataset_g(model, train_dataset, test_dataset, layers, layer_names, 
     g_train_input = get_snapshots_f(model, layers, layer_names, new_train_input)
     g_test_input = get_snapshots_f(model, layers, layer_names, new_test_input)
     
-    return (g_train_input.unsqueeze(1), new_train_target.long()), (g_test_input.unsqueeze(1), new_test_target.long())
+    return (g_train_input.unsqueeze(1), new_train_target), (g_test_input.unsqueeze(1), new_test_target)
 
 
 ######################################################################
