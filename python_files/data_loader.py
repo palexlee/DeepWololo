@@ -160,8 +160,8 @@ def generate_newdataset(train_dataset, test_dataset, split=0.7):
     test_input = test_dataset[0]
     test_target = test_dataset[1]
     
-    N_train = int(0.7* len(train_input))
-    N_test = int(0.7 * len(test_input))
+    N_train = int(split* len(train_input))
+    N_test = int(split * len(test_input))
     
     g_train_input = torch.cat((train_input[:N_train], test_input[:N_test]), 0)
     g_train_target = torch.cat((torch.ones(N_train), torch.zeros(N_test)), 0)

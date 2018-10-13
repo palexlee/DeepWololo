@@ -50,6 +50,54 @@ class aliG(nn.Module):
         x = self.reshape(x)
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
-        x = torch.sigmoid(self.fc3(x))
+        x = self.fc3(x)
         return x
+    
+def aliGs(vector_size):
+    finalVectorSize = (((((vector_size-7)//2)-4)//2)-2)//2
+    
+    model = nn.Sequential(
+        nn.Conv1d(1, 32, kernel_size = 8),
+        nn.RReLU(),
+        nn.BatchNorm1d(32),
+        nn.MaxPool1d(kernel_size = 2),
+        
+        nn.Conv1d(32, 64, kernel_size = 5),
+        nn.RReLU(),
+        nn.BatchNorm1d(64),
+        nn.MaxPool1d(kernel_size = 2),
+        
+        nn.Conv1d(64, 16, kernel_size = 3),
+        nn.RReLU(),
+        nn.BatchNorm1d(16),
+        nn.MaxPool1d(kernel_size = 2),
+        
+        View([-1]),
+        nn.Linear(16* finalVectorSize, 100),
+        nn.RReLU(),
+        nn.Dropout(),
+        
+        nn.Linear(100, 32),
+        nn.RReLU(),
+        nn.Dropout(),
+        
+        nn.Linear(32, 2)
+    )
+    
+    return model
+  
+def denseG(vector_size):
+    model = nn.Sequential(
+        View([-1]),
+        nn.Linear(vector_size, 128),
+        nn.RReLU(),
+        nn.Dropout(0.3),
+        
+        nn.Linear(128, 128),
+        nn.RReLU(),
+        nn.Dropout(0.2),
+        
+        nn.Linear(128, 2),
+    )
+    return model
     
