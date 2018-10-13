@@ -65,7 +65,7 @@ class ModelTrainer(object):
                 idxs = idxs.cuda()
             idxs = [idxs] if batch_size is None else idxs.split(batch_size)
             
-            train_correct = 0
+            train_acc = 0
             train_loss = 0
             for batch in idxs:
                 self.optimizer.zero_grad()
@@ -75,12 +75,12 @@ class ModelTrainer(object):
                 self.optimizer.step()
                 
                 with torch.no_grad():
-                    train_correct += (self.y_hat_fun(y_hat) == y_train[batch]).sum()
-                    train_loss += loss
+                    train_acc += (self.y_hat_fun(y_hat) == y_train[batch]).long().sum().item()/x_train.shape[0]
+                    train_loss += loss.item()/x_train.shape[0]
             
-                    val_loss = np.nan
                     val_acc = np.nan
-            
+                    val_loss = np.nan
+                    
             if validation_data is not None:
                 #Disable training mode
                 #self.model.train(False)
@@ -88,22 +88,24 @@ class ModelTrainer(object):
                     self.model.eval()
 
                     x_test, y_test = validation_data
-                    y_hat = self.model(x_test)
-                    val_loss = self.criterion(*self.criterion_fun(y_hat, y_test)).item()/len(x_test)
-                    val_acc = (self.y_hat_fun(y_hat)==y_test).float().sum().item()/len(x_test)
+                    y_hat_val = self.model(x_test)
+                    
+                    val_acc = (self.y_hat_fun(y_hat_val) == y_test).long().sum().item()/x_test.shape[0]
+                    val_loss = self.criterion(*self.criterion_fun(y_hat_val, y_test)).item()/x_test.shape[0]
+                    
                     
             for name, param in self.model.named_parameters():
                 self.writer.add_histogram(name, param.clone().cpu().data.numpy(), epoch)
                 
-            self.writer.add_scalar('Train/Loss', train_loss.item()/x_train.shape[0], epoch)
-            self.writer.add_scalar('Train/Accuracy', train_correct.item()/x_train.shape[0], epoch)
+            self.writer.add_scalar('Train/Loss', train_loss, epoch)
+            self.writer.add_scalar('Train/Accuracy', train_acc, epoch)
             self.writer.add_scalar('Eval/Loss', val_loss, epoch)
             self.writer.add_scalar('Eval/Accuracy', val_acc, epoch)
 
                 
             self.history.add([                    
-                train_loss.item()/x_train.shape[0],
-                train_correct.item()/x_train.shape[0],
+                train_loss,
+                train_acc,
                 val_loss,
                 val_acc
             ])

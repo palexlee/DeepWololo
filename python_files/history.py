@@ -8,9 +8,9 @@ class History(object):
         self.hist = pd.DataFrame(columns=['train loss', 'train acc', 'val loss', 'val acc'])
         
     formatters = {
-            'train loss': "{:0<0.05f}".format, 
+            'train loss': "{:0.8f}".format, 
             'train acc': "{:0.3f}".format,
-            'val loss': "{:0<0.05f}".format, 
+            'val loss': "{:0.8f}".format, 
             'val acc': "{:0.3f}".format}
     
     def add(self, new_epoch):
