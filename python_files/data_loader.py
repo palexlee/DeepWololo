@@ -205,8 +205,9 @@ def get_snapshots_f(model, layers, layer_names, data):
         remove_spying(handle_d)
                 
         return outputs
+    
 
-def generate_dataset_g(model, train_dataset, test_dataset, layers, layer_names, split=0.7):
+def generate_dataset_g(model, train_dataset, test_dataset, layers, layer_names, split=0.7, full=True):
     """
     Generate the dataset for g with the values spied from the given layers as input and the
     labels taking value '1' if the original data was part of the train set, '0' otherwise.
@@ -225,6 +226,18 @@ def generate_dataset_g(model, train_dataset, test_dataset, layers, layer_names, 
     
     g_train_input = get_snapshots_f(model, layers, layer_names, new_train_input)
     g_test_input = get_snapshots_f(model, layers, layer_names, new_test_input)
+    
+    if not full:
+        idx_train = torch.randperm(g_train_input.shape[0])
+        idx_test = torch.randperm(g_test_input.shape[0])
+        if(g_train_input.is_cuda): 
+            idx_train = idx_train.cuda()
+            idx_test = idx_test.cuda()
+        
+        g_train_input = g_train_input[idx_train].narrow(0, 0, 1000)
+        new_train_target = new_train_target[idx_train].narrow(0, 0, 1000)
+        g_test_input = g_test_input[idx_test].narrow(0, 0, 1000)
+        new_test_target = new_test_target[idx_test].narrow(0, 0, 1000)
     
     return (g_train_input.unsqueeze(1), new_train_target), (g_test_input.unsqueeze(1), new_test_target)
 
