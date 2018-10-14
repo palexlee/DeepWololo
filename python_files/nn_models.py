@@ -21,6 +21,30 @@ class LeNet(nn.Module):
         x = F.relu(self.fc1(x))
         x = self.fc2(x)
         return x
+
+def shadow_model() :
+  model = nn.Sequential(
+      nn.Conv2d(1, 32, kernel_size=3),
+      nn.ReLU(),
+      nn.Conv2d(32 ,32, kernel_size=3),
+      nn.ReLU(),
+      nn.MaxPool2d(2),
+      nn.Dropout(0.25),
+      
+      nn.Conv2d(32, 64, kernel_size=3),
+      nn.ReLU(),
+      nn.Conv2d(64 ,64, kernel_size=3),
+      nn.ReLU(),
+      nn.MaxPool2d(2),
+      nn.Dropout(0.25),
+      
+      View([-1]),
+      nn.Linear(1024, 512),
+      nn.ReLU(),
+      nn.Dropout(0.5),
+      nn.Linear(512, 10)
+  )
+  return model
     
 #Model to differentiate train from test layer activations
 class aliG(nn.Module):
