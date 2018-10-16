@@ -99,13 +99,13 @@ class ModelTrainer(object):
                     val_loss = self.criterion(*self.criterion_fun(y_hat_val, y_test)).item()/x_test.shape[0]
 
 
-            for name, param in self.model.named_parameters():
-                self.writer.add_histogram(name, param.clone().cpu().data.numpy(), epoch)
+            #for name, param in self.model.named_parameters():
+                #self.writer.add_histogram(name, param.clone().cpu().data.numpy(), epoch)
 
-            self.writer.add_scalar('Train/Loss', train_loss, epoch)
-            self.writer.add_scalar('Train/Accuracy', train_acc, epoch)
-            self.writer.add_scalar('Eval/Loss', val_loss, epoch)
-            self.writer.add_scalar('Eval/Accuracy', val_acc, epoch)
+            #self.writer.add_scalar('Train/Loss', train_loss, epoch)
+            #self.writer.add_scalar('Train/Accuracy', train_acc, epoch)
+            #self.writer.add_scalar('Eval/Loss', val_loss, epoch)
+            #self.writer.add_scalar('Eval/Accuracy', val_acc, epoch)
 
 
             self.history.add([

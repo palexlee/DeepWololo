@@ -238,8 +238,14 @@ def generate_dataset_g(model, train_dataset, test_dataset, layers, layer_names, 
         new_train_target = new_train_target[idx_train].narrow(0, 0, 1000)
         g_test_input = g_test_input[idx_test].narrow(0, 0, 1000)
         new_test_target = new_test_target[idx_test].narrow(0, 0, 1000)
+        
+    g_train_input = g_train_input.unsqueeze(1).type_as(train_dataset[0])
+    new_train_target = new_train_target.type_as(train_dataset[1])
     
-    return (g_train_input.unsqueeze(1), new_train_target), (g_test_input.unsqueeze(1), new_test_target)
+    g_test_input = g_test_input.unsqueeze(1).type_as(test_dataset[0])
+    new_test_target = new_test_target.type_as(test_dataset[1])
+    
+    return (g_train_input, new_train_target), (g_test_input, new_test_target)
 
 
 ######################################################################
