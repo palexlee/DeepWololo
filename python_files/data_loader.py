@@ -248,7 +248,25 @@ def generate_dataset_g(model, train_dataset, test_dataset, layers, layer_names, 
     return (g_train_input, new_train_target), (g_test_input, new_test_target)
 
 
-def generate_dataset_g_per_class(model, train_dataset, test_dataset, layers, layer_names, split=0.7):
+def generate_dataset_g_per_class(model, train_dataset, test_dataset, layers, layer_names, split=0.7, full=True):
+    """
+    Generate the dataset for g with the values spied from the given layers as input and the
+    labels taking value '1' if the original data was part of the train set, '0' otherwise. 
+    The generated datasets are separated by classes, ie. if your original training/testing
+    data had n target classes, this function will return two lists (train and test) of n 
+    components, with the i-th component being the train or test dataset for the i-th 
+    target class.
+    Args:
+    -model : model to spy
+    -train_dataset: original train dataset
+    -test_dataset: original test dataset
+    -layers: Array containing the model layers to spy on
+    -layer_name: Array containing the names of the layer, to be used as keys in the returned
+    -split: Percentage of data to keep for the new train dataset
+    Returns:
+    -list of n new train datasets
+    -list of n new test dataset
+    """
     train_input, train_target = train_dataset
     test_input, test_target = test_dataset
     
@@ -265,12 +283,49 @@ def generate_dataset_g_per_class(model, train_dataset, test_dataset, layers, lay
 
     for c in target_classes:
         (tmp1, tmp2) = \
-            generate_dataset_g(model, train_dataset_classes[c], test_dataset_classes[c], layers, layer_names, split=split)
+            generate_dataset_g(model, train_dataset_classes[c], test_dataset_classes[c], layers, layer_names, split=split, full=full)
         g_train_dataset_classes.append(tmp1)
         g_test_dataset_classes.append(tmp2)
         
     return g_train_dataset_classes, g_test_dataset_classes
-    
-
 
 ######################################################################
+
+def generate_n_shadow_models_datasets(n, train_dataset, test_dataset):
+    """
+    split the original dataset in n disjoint train datasets and n disjoint
+    test datasets of equal size, that can be then used to train n different
+    'shadow' models of a given model.
+    Args:
+    -n : number of 'shadow' datasets to split the original datasets into.
+    -train_dataset: original train dataset
+    -test_dataset: original test dataset
+    Returns:
+    -list of n 'shadow' train datasets
+    -list of n 'shadow' test datasets
+    """
+    train_step = train_dataset[0].shape[0]//n
+    test_step = test_dataset[0].shape[0]//n
+    
+    shadow_train_inputs = list()
+    shadow_train_targets = list()
+    shadow_test_inputs = list()
+    shadow_test_targets = list()
+
+    shadow_train_datasets = list()
+    shadow_test_datasets = list() 
+    
+    for i in range(n):
+        shadow_train_inputs.append(train_dataset[0][i*train_step:(i+1)*train_step])
+        shadow_train_targets.append(train_dataset[1][i*train_step:(i+1)*train_step])
+        shadow_train_datasets.append((shadow_train_inputs[i], shadow_train_targets[i]))
+
+        shadow_test_inputs.append(test_dataset[0][i*test_step:(i+1)*test_step])
+        shadow_test_targets.append(test_dataset[1][i*test_step:(i+1)*test_step])
+        shadow_test_datasets.append((shadow_test_inputs[i], shadow_test_targets[i]))
+        
+    return (shadow_train_datasets, shadow_test_datasets)
+
+######################################################################
+
+
