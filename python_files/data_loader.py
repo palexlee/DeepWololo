@@ -248,4 +248,29 @@ def generate_dataset_g(model, train_dataset, test_dataset, layers, layer_names, 
     return (g_train_input, new_train_target), (g_test_input, new_test_target)
 
 
+def generate_dataset_g_per_class(model, train_dataset, test_dataset, layers, layer_names, split=0.7):
+    train_input, train_target = train_dataset
+    test_input, test_target = test_dataset
+    
+    target_classes = torch.unique(train_target, sorted=True)
+
+    train_mask_classes = [train_target == c for c in target_classes]
+    test_mask_classes = [test_target == c for c in target_classes]
+
+    train_dataset_classes = [(train_input[mask], train_target[mask]) for mask in train_mask_classes]
+    test_dataset_classes = [(test_input[mask], test_target[mask]) for mask in test_mask_classes]
+    
+    g_train_dataset_classes = list()
+    g_test_dataset_classes = list()
+
+    for c in target_classes:
+        (tmp1, tmp2) = \
+            generate_dataset_g(model, train_dataset_classes[c], test_dataset_classes[c], layers, layer_names, split=split)
+        g_train_dataset_classes.append(tmp1)
+        g_test_dataset_classes.append(tmp2)
+        
+    return g_train_dataset_classes, g_test_dataset_classes
+    
+
+
 ######################################################################
