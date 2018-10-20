@@ -4,6 +4,13 @@
 
 
 
+__Insight from papers__
+
+* The more data in the training dataset is associated with a given class, the lower the attack precision for that class.
+* overfitting is not the only factor that causes a model to be vulnerable to membership inference.
+
+
+
 Overfit => réduire le nombre de paramètre jusqu'à que ça marche
 
 
