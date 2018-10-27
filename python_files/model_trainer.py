@@ -24,7 +24,8 @@ class ModelTrainer(object):
         mt.fit(train_data, test_data, epochs=250, batch_size=100, verbose=10)
         mt.plot_training("Learning curves")
     """
-    def __init__(self, model, criterion, optimizer, y_hat_fun=lambda y: y, criterion_fun=lambda x, y:(x, y), batch_fun=lambda x, y: x):
+    def __init__(self, model, criterion, optimizer, y_hat_fun=lambda y: y, criterion_fun=lambda x, y:(x, y), batch_fun=lambda x, y: x, 
+                 tsx_name=None, embedding_log=10, nb_labels=10):
         """Initialize a ModelTrainer.
         :argument model a SimpleNet or PyTorch model
         :argument criterion the loss function, see criterion.py
@@ -39,7 +40,10 @@ class ModelTrainer(object):
         self.criterion_fun = criterion_fun
         self.batch_fun = batch_fun
         self.best_model = None
-        self.writer = SummaryWriter()
+        self.writer = SummaryWriter(tsx_name)
+        self.use_tensorboard = tsx_name is not None
+        self.embedding_log = embedding_log
+        self.nb_labels = nb_labels
 
     def fit(self, train_data, validation_data=None, epochs=25, batch_size=None, verbose=1):
         """Fit the model on the training data.
@@ -97,15 +101,34 @@ class ModelTrainer(object):
 
                     val_acc = (self.y_hat_fun(y_hat_val) == y_test).long().sum().item()/x_test.shape[0]
                     val_loss = self.criterion(*self.criterion_fun(y_hat_val, y_test)).item()/x_test.shape[0]
+                    
+                    if self.use_tensorboard:
+                        for i in range(self.nb_labels):
+                            idx = y_test == i
+                            if y_test.is_cuda:
+                                idx = idx.cuda()
+                                
+                            self.writer.add_histogram('population/{}'.format(i), y_hat_val[idx].cpu().data.numpy(), epoch)
+ 
+                    """if epoch % self.embedding_log == 0:
+                    # we need 3 dimension for tensor to visualize it!
+                    y_hat_val = y_hat_val[:100]
+                    y_hat_val = torch.cat((y_hat_val.cpu().data, torch.ones(len(y_hat_val), 1)), 1)
+                    self.writer.add_embedding(
+                        y_hat_val.cpu(),
+                        metadata=y_test[:100].cpu().data,
+                        label_img=x_test[:100].cpu().data,
+                        global_step=epoch)"""
 
+            if self.use_tensorboard:
+                
+                for name, param in self.model.named_parameters():
+                    self.writer.add_histogram(name.replace('.', '/'), param.clone().cpu().data.numpy(), epoch)
 
-            #for name, param in self.model.named_parameters():
-                #self.writer.add_histogram(name, param.clone().cpu().data.numpy(), epoch)
-
-            #self.writer.add_scalar('Train/Loss', train_loss, epoch)
-            #self.writer.add_scalar('Train/Accuracy', train_acc, epoch)
-            #self.writer.add_scalar('Eval/Loss', val_loss, epoch)
-            #self.writer.add_scalar('Eval/Accuracy', val_acc, epoch)
+                self.writer.add_scalar('Train/Loss', train_loss, epoch)
+                self.writer.add_scalar('Train/Accuracy', train_acc, epoch)
+                self.writer.add_scalar('Eval/Loss', val_loss, epoch)
+                self.writer.add_scalar('Eval/Accuracy', val_acc, epoch)
 
 
             self.history.add([
@@ -125,6 +148,7 @@ class ModelTrainer(object):
             print("*******************************************************************************")
 
         self.best_model = copy.deepcopy(self.model)
+        self.writer.close()
 
         return self.history
 
