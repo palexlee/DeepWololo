@@ -64,6 +64,7 @@ class ModelTrainer(object):
             #Set the training mode for dropout
             #or bathNorm to apply
             self.model.train(True)
+            self.criterion.train(True)
 
             if batch_size is not None:
                 batch_size = self.batch_fun(init_batch_size, epoch)
@@ -85,7 +86,7 @@ class ModelTrainer(object):
 
                 with torch.no_grad():
                     train_acc += (self.y_hat_fun(y_hat) == y_train[batch]).long().sum().item()/x_train.shape[0]
-                    train_loss += loss.item()/x_train.shape[0]
+                    train_loss += loss.item()/len(idxs)
 
                     val_acc = np.nan
                     val_loss = np.nan
@@ -95,12 +96,13 @@ class ModelTrainer(object):
                 #self.model.train(False)
                 with torch.no_grad():
                     self.model.eval()
-
+                    self.criterion.eval()
+                    
                     x_test, y_test = validation_data
                     y_hat_val = self.model(x_test)
 
                     val_acc = (self.y_hat_fun(y_hat_val) == y_test).long().sum().item()/x_test.shape[0]
-                    val_loss = self.criterion(*self.criterion_fun(y_hat_val, y_test)).item()/x_test.shape[0]
+                    val_loss = self.criterion(*self.criterion_fun(y_hat_val, y_test)).item()
                     
                     if self.use_tensorboard:
                         for i in range(self.nb_labels):
