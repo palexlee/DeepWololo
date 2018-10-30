@@ -108,7 +108,9 @@ class ModelTrainer(object):
                             if y_test.is_cuda:
                                 idx = idx.cuda()
                                 
-                            self.writer.add_histogram('population/{}'.format(i), y_hat_val[idx].cpu().data.numpy(), epoch)
+                            self.writer.add_histogram('population/{}'.format(i), y_hat_val[idx, i].cpu().data.numpy(), epoch)
+                        if self.nb_labels == 2:
+                            self.writer.add_histogram('diff_population', (y_hat_val[:,1] - y_hat_val[:, 0]).cpu().data.numpy(), epoch)
  
                     """if epoch % self.embedding_log == 0:
                     # we need 3 dimension for tensor to visualize it!
