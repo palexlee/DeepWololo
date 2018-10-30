@@ -7,6 +7,7 @@ from torch import Tensor
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+import pickle
 
 from model_trainer import ModelTrainer
 from history import History
@@ -98,3 +99,31 @@ def remove_spying(handles_dict):
         h.remove()
         
 #######################################################################################
+
+def save_model_state(model, filename):
+    """
+    save the specified model state in memory, with the given filename.
+    
+    Args: 
+    -model : the pytorch model which state to save
+    -filename : name of the file in which to store the model state
+    """
+    model_file = open(filename, mode='wb')
+    pickle.dump(model.state_dict(), model_file)
+    model_file.close()
+    
+def load_model_state(model, filename):
+    """
+    load and replace the given model state from a previously saved
+    state in memory, under the given filename.
+    
+    Args: 
+    -model : the pytorch model which state to replace
+    -filename : name of the file in which the previous model state is saved
+    """
+    model_file = open(filename, mode='rb')
+    model.load_state_dict(pickle.load(model_file))
+    model_file.close()
+    
+#######################################################################################    
+    

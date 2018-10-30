@@ -21,6 +21,25 @@ class LeNet(nn.Module):
         x = F.relu(self.fc1(x))
         x = self.fc2(x)
         return x
+    
+class LeoNet(nn.Module):
+    def __init__(self):
+        super(LeoNet, self).__init__()
+        self.conv1 = nn.Conv2d(1, 8, kernel_size = 5)
+        self.mxp1 = nn.MaxPool2d(kernel_size = 3)
+        self.conv2 = nn.Conv2d(8, 4, kernel_size = 5)
+        self.mxp2 = nn.MaxPool2d(kernel_size = 2)
+        self.view = View([-1])
+        self.fc1 = nn.Linear(16, 16)
+        self.fc2 = nn.Linear(16, 10)
+
+    def forward(self, x):
+        x = F.relu(self.mxp1(self.conv1(x)))
+        x = F.relu(self.mxp2(self.conv2(x)))
+        x = self.view(x)
+        x = F.relu(self.fc1(x))
+        x = self.fc2(x)
+        return x
 
 def shadow_model() :
     model = nn.Sequential(
@@ -46,69 +65,7 @@ def shadow_model() :
     )
     return model
     
-#Model to differentiate train from test layer activations
-class aliG(nn.Module):
-    def __init__(self, vector_size):
-        super(aliG, self).__init__()
-        
-        self.finalVectorSize = (((((vector_size-7)//2)-4)//2)-2)//2
-        
-        self.conv1 = nn.Conv1d(1, 32, kernel_size = 8)
-        self.maxpool1 = nn.MaxPool1d(kernel_size = 2)
-        
-        self.conv2 = nn.Conv1d(32, 128, kernel_size = 5)
-        self.maxpool2 = nn.MaxPool1d(kernel_size = 2)
-        
-        self.conv3 = nn.Conv1d(128, 16, kernel_size = 3)
-        self.maxpool3 = nn.MaxPool1d(kernel_size = 2)
-        
-        self.reshape = View([-1])
-        self.fc1 = nn.Linear(16*self.finalVectorSize, 100)
-        self.fc2 = nn.Linear(100, 32)
-        self.fc3 = nn.Linear(32, 2)
 
-    def forward(self, x):
-        x = F.relu(self.maxpool1(self.conv1(x)))
-        x = F.relu(self.maxpool2(self.conv2(x)))
-        x = F.relu(self.maxpool3(self.conv3(x)))
-        x = self.reshape(x)
-        x = F.relu(self.fc1(x))
-        x = F.relu(self.fc2(x))
-        x = self.fc3(x)
-        return x
-    
-def aliGs(vector_size):
-    finalVectorSize = (((((vector_size-7)//2)-4)//2)-2)//2
-    
-    model = nn.Sequential(
-        nn.Conv1d(1, 32, kernel_size = 8),
-        nn.RReLU(),
-        nn.BatchNorm1d(32),
-        nn.MaxPool1d(kernel_size = 2),
-        
-        nn.Conv1d(32, 64, kernel_size = 5),
-        nn.RReLU(),
-        nn.BatchNorm1d(64),
-        nn.MaxPool1d(kernel_size = 2),
-        
-        nn.Conv1d(64, 16, kernel_size = 3),
-        nn.RReLU(),
-        nn.BatchNorm1d(16),
-        nn.MaxPool1d(kernel_size = 2),
-        
-        View([-1]),
-        nn.Linear(16* finalVectorSize, 100),
-        nn.RReLU(),
-        nn.Dropout(),
-        
-        nn.Linear(100, 32),
-        nn.RReLU(),
-        nn.Dropout(),
-        
-        nn.Linear(32, 2)
-    )
-    
-    return model
   
 def denseG(vector_size):
     model = nn.Sequential(
