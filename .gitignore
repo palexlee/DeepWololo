@@ -1,7 +1,6 @@
 .ipynb_checkpoints
 __pycache__
 *.pdf
-*.pickle
 data_bci
 data/
 runs/

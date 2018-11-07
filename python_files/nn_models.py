@@ -25,17 +25,14 @@ class LeNet(nn.Module):
 class LeoNet(nn.Module):
     def __init__(self):
         super(LeoNet, self).__init__()
-        self.conv1 = nn.Conv2d(1, 8, kernel_size = 5)
-        self.mxp1 = nn.MaxPool2d(kernel_size = 3)
-        self.conv2 = nn.Conv2d(8, 4, kernel_size = 5)
-        self.mxp2 = nn.MaxPool2d(kernel_size = 2)
+        self.conv1 = nn.Conv2d(1, 16, kernel_size = 5)
+        self.mxp1 = nn.MaxPool2d(kernel_size = 4)
         self.view = View([-1])
-        self.fc1 = nn.Linear(16, 16)
-        self.fc2 = nn.Linear(16, 10)
+        self.fc1 = nn.Linear(576, 32)
+        self.fc2 = nn.Linear(32, 10)
 
     def forward(self, x):
         x = F.relu(self.mxp1(self.conv1(x)))
-        x = F.relu(self.mxp2(self.conv2(x)))
         x = self.view(x)
         x = F.relu(self.fc1(x))
         x = self.fc2(x)
@@ -65,7 +62,18 @@ def shadow_model() :
     )
     return model
     
-
+def CifarOverfit():
+    model = nn.Sequential(
+        View([-1]),
+        nn.Linear(3072, 128),
+        nn.ReLU(),
+        
+        nn.Linear(128, 32),
+        nn.ReLU(),
+        
+        nn.Linear(32, 10)
+    )
+    return model
   
 def denseG(vector_size):
     model = nn.Sequential(
