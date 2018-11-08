@@ -331,71 +331,22 @@ def generate_n_shadow_models_datasets(n, train_dataset, test_dataset):
 
 ######################################################################
 
-def generate_dataset_g_per_class_from_shadows(models, train_dataset, test_dataset, layers, layer_names, split=0.7, full=True):
-    """
-    Generate the dataset for g with the values spied from the given layers for each models as input and the
-    labels taking value '1' if the original data was part of the train set, '0' otherwise. 
-    The generated datasets are separated by classes, ie. if your original training/testing
-    data had n target classes, this function will return two lists (train and test) of n 
-    components, with the i-th component being the train or test dataset for the i-th 
-    target class.
-    Args:
-    -models : Array containing the models to spy
-    -train_dataset: original train dataset
-    -test_dataset: original test dataset
-    -layers: Array of array containing the model layers to spy on
-    -layer_name: Array of array containing the names of the layer, to be used as keys in the returned
-    -split: Percentage of data to keep for the new train dataset
-    Returns:
-    -list of n new train datasets
-    -list of n new test dataset
-    """
-    train_input, train_target = train_dataset
-    test_input, test_target = test_dataset
+def generate_dataset_g_per_class_from_shadows(models, train_datasets, test_datasets, layers, layer_names, split=0.7, nb_class=10, full=True):
     
-    target_classes = torch.unique(train_target, sorted=True)
-
-    train_mask_classes = [train_target == c for c in target_classes]
-    test_mask_classes = [test_target == c for c in target_classes]
-
-    train_dataset_classes = [(train_input[mask], train_target[mask]) for mask in train_mask_classes]
-    test_dataset_classes = [(test_input[mask], test_target[mask]) for mask in test_mask_classes]
-    
-    g_train_dataset_classes = list()
-    g_test_dataset_classes = list()
-
-    for c in target_classes:
-        g_train_input_full = None
-        g_train_target_full = None
-        g_test_input_full = None
-        g_test_target_full = None
-
-        for i, net in enumerate(models):
-            (g_train_input, g_train_target), (g_test_input, g_test_target) = \
-            generate_dataset_g(net, train_dataset_classes[c], test_dataset_classes[c], layers[i], layer_names[i], split=split, full=full)
-
-            g_train_target = g_train_target.long()
-            g_test_target = g_test_target.long()
-
-            if g_train_input_full is None:
-                g_train_input_full = g_train_input
-                g_train_target_full = g_train_target
-                g_test_input_full = g_test_input
-                g_test_target_full = g_test_target
-            else:
-                g_train_input_full = torch.cat((g_train_input_full,g_train_input), 0)
-                g_train_target_full = torch.cat((g_train_target_full, g_train_target), 0)
-                g_test_input_full = torch.cat((g_test_input_full, g_test_input), 0)
-                g_test_target_full = torch.cat((g_test_target_full, g_test_target), 0)
-
-        (tmp1, tmp2) = (g_train_input_full, g_train_target_full), (g_test_input_full, g_test_target_full)
-            
-        g_train_dataset_classes.append(tmp1)
-        g_test_dataset_classes.append(tmp2)
+    #f x (train, test) x classes x (input, target)
+    g_train_dict = {} 
+    g_test_dict = {}
+    for i, model in enumerate(models):
+        g_train_i_classes, g_test_i_classes = generate_dataset_g_per_class(model, train_datasets[i], test_datasets[i], layers[i], layer_names, split, full)
         
-    return g_train_dataset_classes, g_test_dataset_classes
-
-
-
-
-
+        for c in range(0, nb_class):
+            c_train = g_train_dict.get(c)
+            c_test = g_test_dict.get(c)
+            if c_train is None:
+                g_train_dict[c] = g_train_i_classes[c]
+                g_test_dict[c] = g_test_i_classes[c]
+            else:
+                g_train_dict[c] = [torch.cat((c_train[0], g_train_i_classes[c][0]), 0), torch.cat((c_train[1], g_train_i_classes[c][1]), 0)]
+                g_test_dict[c] = [torch.cat((c_test[0], g_test_i_classes[c][0]), 0), torch.cat((c_test[1], g_test_i_classes[c][1]), 0)]
+    
+    return list(g_train_dict.values()), list(g_test_dict.values())

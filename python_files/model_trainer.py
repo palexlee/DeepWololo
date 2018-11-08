@@ -24,7 +24,7 @@ class ModelTrainer(object):
         mt.fit(train_data, test_data, epochs=250, batch_size=100, verbose=10)
         mt.plot_training("Learning curves")
     """
-    def __init__(self, model, criterion, optimizer, y_hat_fun=lambda y: y, criterion_fun=lambda x, y:(x, y), batch_fun=lambda x, y: x, 
+    def __init__(self, model, criterion, optimizer, y_hat_fun=lambda y: y, criterion_fun=lambda x, y:(x, y), batch_fun=lambda x, y: x,
                  tsx_name=None, embedding_log=10, nb_labels=10):
         """Initialize a ModelTrainer.
         :argument model a SimpleNet or PyTorch model
@@ -97,23 +97,26 @@ class ModelTrainer(object):
                 with torch.no_grad():
                     self.model.eval()
                     self.criterion.eval()
-                    
+
                     x_test, y_test = validation_data
                     y_hat_val = self.model(x_test)
 
                     val_acc = (self.y_hat_fun(y_hat_val) == y_test).long().sum().item()/x_test.shape[0]
                     val_loss = self.criterion(*self.criterion_fun(y_hat_val, y_test)).item()
-                    
+
                     if self.use_tensorboard:
                         for i in range(self.nb_labels):
                             idx = y_test == i
                             if y_test.is_cuda:
                                 idx = idx.cuda()
-                                
+
                             self.writer.add_histogram('population/{}'.format(i), y_hat_val[idx, i].cpu().data.numpy(), epoch)
                         if self.nb_labels == 2:
-                            self.writer.add_histogram('diff_population', (y_hat_val[:,1] - y_hat_val[:, 0]).cpu().data.numpy(), epoch)
- 
+                            label_1 = y_test == 1
+                            label_0 = y_test == 0
+                            self.writer.add_histogram('diff_population/0', (y_hat_val[label_0,1] - y_hat_val[label_0, 0]).cpu().data.numpy(), epoch)
+                            self.writer.add_histogram('diff_population/1', (y_hat_val[label_1,1] - y_hat_val[label_1, 0]).cpu().data.numpy(), epoch)
+
                     """if epoch % self.embedding_log == 0:
                     # we need 3 dimension for tensor to visualize it!
                     y_hat_val = y_hat_val[:100]
@@ -125,7 +128,7 @@ class ModelTrainer(object):
                         global_step=epoch)"""
 
             if self.use_tensorboard:
-                
+
                 for name, param in self.model.named_parameters():
                     self.writer.add_histogram(name.replace('.', '/'), param.clone().cpu().data.numpy(), epoch)
 
