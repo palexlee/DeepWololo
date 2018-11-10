@@ -19,13 +19,23 @@ def import_data(folder='./data_bci', use_full_data = False, normalize=True, cuda
     test_input, test_target = test_input, test_target
     
     if (normalize):
-        tr_mean = train_input.mean()
-        tr_std = train_input.std()
-        
-        train_input = (train_input-tr_mean)/tr_std
-        test_input = (test_input-tr_mean)/tr_std
+        (train_input, train_target), (test_input, test_target) = \
+            normalize_data((train_input, train_target), (test_input, test_target))
         
     return train_input, train_target, test_input, test_target
+
+def normalize_data(train_dataset, test_dataset):
+    """Utility function to normalize the data.
+    :argument train_dataset tuple containing training input and training target
+    :argument test_dataset tuple containing testing input and testing target"""
+    
+    tr_mean = train_dataset[0].mean()
+    tr_std = train_dataset[0].std()
+        
+    train_dataset[0] = (train_dataset[0]-tr_mean)/tr_std        
+    test_dataset[0] = (test_dataset[0]-tr_mean)/tr_std
+    
+    return train_dataset, test_dataset
 
 def generate_noise(std, shape, div=10):
     """Generate a gaussian noise Tensor with the desired std.

@@ -337,7 +337,8 @@ def generate_dataset_g_per_class_from_shadows(models, train_datasets, test_datas
     g_train_dict = {} 
     g_test_dict = {}
     for i, model in enumerate(models):
-        g_train_i_classes, g_test_i_classes = generate_dataset_g_per_class(model, train_datasets[i], test_datasets[i], layers[i], layer_names, split, full)
+        g_train_i_classes, g_test_i_classes = \
+            generate_dataset_g_per_class(model, train_datasets[i], test_datasets[i], [layers[i]], [layer_names[i]], split, full)
         
         for c in range(0, nb_class):
             c_train = g_train_dict.get(c)
