@@ -78,15 +78,62 @@ def CifarOverfit():
 def denseG(vector_size):
     model = nn.Sequential(
         View([-1]),
-        nn.Linear(vector_size, 128),
-        nn.RReLU(),
+        nn.Linear(vector_size, 256),
+        nn.ReLU(),
+        nn.BatchNorm1d(256),
+        nn.Dropout(0.5),
+
+        nn.Linear(256, 128),
+        nn.ReLU(),
+        nn.BatchNorm1d(128),
+        nn.Dropout(0.5),
+        
+        nn.Linear(128, 64),
+        nn.ReLU(),
+        nn.BatchNorm1d(64),
         nn.Dropout(0.3),
         
-        nn.Linear(128, 128),
-        nn.RReLU(),
-        nn.Dropout(0.2),
+        nn.Linear(64, 32),
+        nn.ReLU(),
+        nn.BatchNorm1d(32),
         
-        nn.Linear(128, 2),
+        nn.Linear(32, 16),
+        nn.ReLU(),
+        nn.BatchNorm1d(16),
+        
+        nn.Linear(16, 2),
+        nn.Softmax(1)
     )
     return model
-    
+
+def kindaResnetG(layer_dim):
+    dim = layer_dim[2]
+    pad = (1, 1, 1)
+    pool = 2
+    finalVectorSize = layer_dim[2]//pool * layer_dim[3]//pool * layer_dim[4]//pool
+    print(finalVectorSize)
+    model = nn.Sequential(
+        nn.Conv3d(1, 1, kernel_size=3, padding = pad),
+        nn.ReLU(),
+        nn.BatchNorm3d(1),
+        
+        nn.Conv3d(1, 1, kernel_size=3, padding = pad),
+        nn.ReLU(),
+        nn.BatchNorm3d(1),
+        
+        nn.Conv3d(1, 1, kernel_size=3, padding = pad),
+        nn.ReLU(),
+        nn.BatchNorm3d(1),
+        nn.MaxPool3d(pool),
+
+        View([-1]),
+        nn.Linear(finalVectorSize, 128),
+        nn.ReLU(),
+        nn.Linear(128, 32),
+        nn.ReLU(),
+        nn.Linear(32, 16),
+        nn.ReLU(),
+        nn.Linear(16, 2),
+        nn.Softmax(1)
+    )
+    return model
