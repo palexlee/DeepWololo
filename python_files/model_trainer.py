@@ -85,23 +85,45 @@ class ModelTrainer(object):
                 self.optimizer.step()
 
                 with torch.no_grad():
+                    # weighted accuracy
+                    batch_idx_ones = y_train[batch] == 1
+                    batch_idx_zeros = y_train[batch] == 0
+                    y_correct_1 = (self.y_hat_fun(y_hat[batch_idx_ones]) == y_train[batch[batch_idx_ones]]).long().sum().item()
+                    y_correct_0 = (self.y_hat_fun(y_hat[batch_idx_zeros]) == y_train[batch[batch_idx_zeros]]).long().sum().item()
+                    # regular accuracy
                     train_acc += (self.y_hat_fun(y_hat) == y_train[batch]).long().sum().item()/x_train.shape[0]
                     train_loss += loss.item()/len(idxs)
 
                     val_acc = np.nan
                     val_loss = np.nan
+            
+            # weighted accuracy
+            total_ones = y_train[y_train == 1].shape[0]
+            total_zeros = y_train[y_train == 0].shape[0]
+            train_weighted_acc = (y_correct_1/total_ones + y_correct_0/total_zeros)/2.
+
 
             if validation_data is not None:
                 #Disable training mode
-                #self.model.train(False)
                 with torch.no_grad():
                     self.model.eval()
                     self.criterion.eval()
 
                     x_test, y_test = validation_data
                     y_hat_val = self.model(x_test)
-
+                    
+                    # regular accuracy
                     val_acc = (self.y_hat_fun(y_hat_val) == y_test).long().sum().item()/x_test.shape[0]
+                    
+                    # weighted accuracy
+                    idx_ones = y_test == 1
+                    idx_zeros = y_test == 0
+                    y_correct_val_1 = (self.y_hat_fun(y_hat_val[idx_ones]) == y_test[idx_ones]).long().sum().item()
+                    y_correct_val_0 = (self.y_hat_fun(y_hat_val[idx_zeros]) == y_test[idx_zeros]).long().sum().item()
+                    total_ones_val = y_test[y_test == 1].shape[0]
+                    total_zeros_val = y_test[y_test == 0].shape[0]
+                    val_weighted_acc = (y_correct_val_1/total_ones_val + y_correct_val_0/total_zeros_val)/2.
+                    
                     val_loss = self.criterion(*self.criterion_fun(y_hat_val, y_test)).item()
 
                     if self.use_tensorboard:
@@ -134,15 +156,19 @@ class ModelTrainer(object):
 
                 self.writer.add_scalar('Train/Loss', train_loss, epoch)
                 self.writer.add_scalar('Train/Accuracy', train_acc, epoch)
+                self.writer.add_scalar('Train/Weighted accuracy', train_weighted_acc)
                 self.writer.add_scalar('Eval/Loss', val_loss, epoch)
                 self.writer.add_scalar('Eval/Accuracy', val_acc, epoch)
+                self.writer.add_scalar('Eval/Weighted accuracy', val_weighted_acc)
 
 
             self.history.add([
                 train_loss,
-                train_acc,
+                #train_acc,
+                train_weighted_acc,
                 val_loss,
-                val_acc
+                #val_acc,
+                val_weighted_acc
             ])
 
             if verbose != 0 and epoch%verbose == 0:

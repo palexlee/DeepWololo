@@ -8,6 +8,8 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import pickle
+import seaborn as sns
+from sklearn.metrics import roc_curve
 
 from model_trainer import ModelTrainer
 from history import History
