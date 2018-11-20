@@ -38,27 +38,31 @@ class LeoNet(nn.Module):
         x = self.fc2(x)
         return x
 
-def shadow_model() :
+def shadow_model(vector_dimension) :
+    channels = vector_dimension[1]
+    size = vector_dimension[2]
+    linear_size = ((((size - 2) // 2) - 2) // 2) ** 2 * 64 
+
     model = nn.Sequential(
-          nn.Conv2d(1, 32, kernel_size=3),
-          nn.ReLU(),
-          nn.Conv2d(32 ,32, kernel_size=3),
-          nn.ReLU(),
-          nn.MaxPool2d(2),
-          nn.Dropout(0.25),
+        nn.Conv2d(channels, 32, kernel_size=3, padding=1),
+        nn.ReLU(),
+        nn.Conv2d(32 ,32, kernel_size=3),
+        nn.ReLU(),
+        nn.MaxPool2d(2),
+        nn.Dropout(0.25),
 
-          nn.Conv2d(32, 64, kernel_size=3),
-          nn.ReLU(),
-          nn.Conv2d(64 ,64, kernel_size=3),
-          nn.ReLU(),
-          nn.MaxPool2d(2),
-          nn.Dropout(0.25),
+        nn.Conv2d(32, 64, kernel_size=3, padding=1),
+        nn.ReLU(),
+        nn.Conv2d(64 ,64, kernel_size=3),
+        nn.ReLU(),
+        nn.MaxPool2d(2),
+        nn.Dropout(0.25),
 
-          View([-1]),
-          nn.Linear(1024, 512),
-          nn.ReLU(),
-          nn.Dropout(0.5),
-          nn.Linear(512, 10)
+        View([-1]),
+        nn.Linear(linear_size, 512),
+        nn.ReLU(),
+        nn.Dropout(0.5),
+        nn.Linear(512, 10)
     )
     return model
     
