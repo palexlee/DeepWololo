@@ -1,9 +1,11 @@
 
 import torch
 from torchvision import datasets
+from torch.utils.data import TensorDataset, ConcatDataset, DataLoader
 
 import argparse
 import os
+from tqdm import tqdm
 
 from utils import spyOn, remove_spying
 
@@ -155,6 +157,7 @@ def generate_newdataset(train_dataset, test_dataset, split=0.7):
     -g_test_input: new test_input
     -g_test_target: new test_target
     """
+
     train_input = train_dataset[0]
     train_target = train_dataset[1]
     test_input = test_dataset[0]
@@ -174,9 +177,42 @@ def generate_newdataset(train_dataset, test_dataset, split=0.7):
     
     return g_train_input, g_train_target, g_test_input, g_test_target
     
-    
+######################################################################
 
-def get_snapshots_f(model, layers, layer_names, data, flatten=False):
+def generate_newdataloaders(train_dataloader, test_dataloader, split=0.7):
+    
+    g_train_loader = None
+    g_test_loader = None
+    
+    for train_batch, test_batch in zip(train_dataloader, test_dataloader):
+        
+        train_set = train_batch[0]
+        test_set = test_batch[0]
+        
+        N_train = int(split* len(train_set))
+        N_test = int(split * len(test_set))
+        
+        g_train_input = torch.cat((train_set[:N_train], test_set[:N_test]), 0)
+        g_train_target = torch.cat((torch.ones(N_train), torch.zeros(N_test)), 0)
+        g_test_input = torch.cat((train_set[N_train:], test_set[N_test:]), 0)
+        g_test_target = torch.cat((torch.ones(len(train_set) - N_train), torch.zeros(len(test_set) - N_test)), 0)
+        
+        if train_set.is_cuda:
+            g_train_target = g_train_target.cuda()
+            g_test_target = g_test_target.cuda()
+            
+        if g_train_loader is None:
+            g_train_loader = TensorDataset(g_train_input, g_train_target)
+            g_test_loader = TensorDataset(g_test_input, g_test_target)
+        else:
+            g_train_loader = ConcatDataset([g_train_loader, TensorDataset(g_train_input, g_train_target)])
+            g_test_loader = ConcatDataset([g_test_loader, TensorDataset(g_test_input, g_test_target)])
+            
+    return g_train_loader, g_test_loader
+
+######################################################################
+
+def get_snapshots_f(model, layers, layer_names, data, dataloader=False, flatten=False):
     """
     Get a snapshot of the given layers when the model is doing the forward pass on the data.
     Args:
@@ -187,14 +223,16 @@ def get_snapshots_f(model, layers, layer_names, data, flatten=False):
     Returns:
     -outpus: Array of values spied from the layers
     """
+    
+        
     with torch.no_grad():
         model.eval()
         
         output_d, handle_d = spyOn(layers, layer_names)
-        _ = model(data)
-        
         outputs = None
         
+        _ = model(data)
+
         for name in layer_names:
             if flatten:
                 output = output_d[name].reshape(data.shape[0], -1)
@@ -210,7 +248,7 @@ def get_snapshots_f(model, layers, layer_names, data, flatten=False):
         return outputs
     
 
-def generate_dataset_g(model, train_dataset, test_dataset, layers, layer_names, split=0.7, full=True):
+def generate_dataset_g2(model, train_dataset, test_dataset, layers, layer_names, split=0.7, full=True, dataloader=False):
     """
     Generate the dataset for g with the values spied from the given layers as input and the
     labels taking value '1' if the original data was part of the train set, '0' otherwise.
@@ -225,6 +263,11 @@ def generate_dataset_g(model, train_dataset, test_dataset, layers, layer_names, 
     -new train dataset
     -new test dataset
     """
+    
+    if not dataloader:
+        train_dataset = [train_dataset]
+        test_dataset = [test_dataset]
+        
     new_train_input, new_train_target, new_test_input, new_test_target = generate_newdataset(train_dataset, test_dataset, split)
     
     g_train_input = get_snapshots_f(model, layers, layer_names, new_train_input)
@@ -249,6 +292,69 @@ def generate_dataset_g(model, train_dataset, test_dataset, layers, layer_names, 
     new_test_target = new_test_target.type_as(test_dataset[1])
     
     return (g_train_input, new_train_target), (g_test_input, new_test_target)
+
+def generate_dataloader_g(model, train_dataset, test_dataset, layers, layer_names, split=0.7, full=True, pin=False, batch_size=1):
+    """
+    Generate the dataset for g with the values spied from the given layers as input and the
+    labels taking value '1' if the original data was part of the train set, '0' otherwise.
+    Args:
+    -model : model to spy
+    -train_dataset: original train dataset
+    -test_dataset: original test dataset
+    -layers: Array containing the model layers to spy on
+    -layer_name: Array containing the names of the layer, to be used as keys in the returned
+    -split: Percentage of data to keep for the new train dataset
+    Returns:
+    -new train dataset
+    -new test dataset
+    """
+    
+    train_loader = None
+    test_loader = None
+    
+    for train_batch, test_batch in tqdm(zip(train_dataset, test_dataset)):
+        new_train_input, new_train_target, new_test_input, new_test_target = generate_newdataset(train_batch, test_batch, split)
+        
+        if torch.cuda.is_available():
+            new_train_input = new_train_input.cuda()
+            new_test_input = new_test_input.cuda()
+
+        g_train_input = get_snapshots_f(model, layers, layer_names, new_train_input)
+        g_test_input = get_snapshots_f(model, layers, layer_names, new_test_input)
+
+        if not full:
+            idx_train = torch.randperm(g_train_input.shape[0])
+            idx_test = torch.randperm(g_test_input.shape[0])
+            if(g_train_input.is_cuda): 
+                idx_train = idx_train.cuda()
+                idx_test = idx_test.cuda()
+
+            g_train_input = g_train_input[idx_train].narrow(0, 0, 1000)
+            new_train_target = new_train_target[idx_train].narrow(0, 0, 1000)
+            g_test_input = g_test_input[idx_test].narrow(0, 0, 1000)
+            new_test_target = new_test_target[idx_test].narrow(0, 0, 1000)
+
+        g_train_input = g_train_input.unsqueeze(1).type_as(new_train_input)
+        #new_train_target = new_train_target.type_as(new_train_traget)
+
+        g_test_input = g_test_input.unsqueeze(1).type_as(new_test_input)
+        #new_test_target = new_test_target.type_as(new_test_target)
+        
+        g_train_input = g_train_input.cpu()
+        new_train_target = new_train_target.long().cpu()
+        g_test_input = g_test_input.cpu()
+        new_test_target = new_test_target.long().cpu()
+ 
+        if train_loader is None:
+            train_loader = TensorDataset(g_train_input, new_train_target)
+            test_loader = TensorDataset(g_test_input, new_test_target)
+        else:
+            train_loader = ConcatDataset([train_loader, TensorDataset(g_train_input, new_train_target)])
+            test_loader = ConcatDataset([test_loader, TensorDataset(g_test_input, new_test_target)])
+            
+        del g_train_input, g_test_input, new_train_target, new_test_target
+            
+    return train_loader, test_loader
 
 
 def generate_dataset_g_per_class(model, train_dataset, test_dataset, layers, layer_names, split=0.7, full=True):
