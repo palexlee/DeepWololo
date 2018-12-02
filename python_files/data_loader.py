@@ -176,39 +176,6 @@ def generate_newdataset(train_dataset, test_dataset, split=0.7):
         g_test_target = g_test_target.cuda()
     
     return g_train_input, g_train_target, g_test_input, g_test_target
-    
-######################################################################
-
-def generate_newdataloaders(train_dataloader, test_dataloader, split=0.7):
-    
-    g_train_loader = None
-    g_test_loader = None
-    
-    for train_batch, test_batch in zip(train_dataloader, test_dataloader):
-        
-        train_set = train_batch[0]
-        test_set = test_batch[0]
-        
-        N_train = int(split* len(train_set))
-        N_test = int(split * len(test_set))
-        
-        g_train_input = torch.cat((train_set[:N_train], test_set[:N_test]), 0)
-        g_train_target = torch.cat((torch.ones(N_train), torch.zeros(N_test)), 0)
-        g_test_input = torch.cat((train_set[N_train:], test_set[N_test:]), 0)
-        g_test_target = torch.cat((torch.ones(len(train_set) - N_train), torch.zeros(len(test_set) - N_test)), 0)
-        
-        if train_set.is_cuda:
-            g_train_target = g_train_target.cuda()
-            g_test_target = g_test_target.cuda()
-            
-        if g_train_loader is None:
-            g_train_loader = TensorDataset(g_train_input, g_train_target)
-            g_test_loader = TensorDataset(g_test_input, g_test_target)
-        else:
-            g_train_loader = ConcatDataset([g_train_loader, TensorDataset(g_train_input, g_train_target)])
-            g_test_loader = ConcatDataset([g_test_loader, TensorDataset(g_test_input, g_test_target)])
-            
-    return g_train_loader, g_test_loader
 
 ######################################################################
 
@@ -248,7 +215,7 @@ def get_snapshots_f(model, layers, layer_names, data, dataloader=False, flatten=
         return outputs
     
 
-def generate_dataset_g2(model, train_dataset, test_dataset, layers, layer_names, split=0.7, full=True, dataloader=False):
+def generate_dataset_g(model, train_dataset, test_dataset, layers, layer_names, split=0.7, full=True, dataloader=False):
     """
     Generate the dataset for g with the values spied from the given layers as input and the
     labels taking value '1' if the original data was part of the train set, '0' otherwise.
@@ -263,10 +230,6 @@ def generate_dataset_g2(model, train_dataset, test_dataset, layers, layer_names,
     -new train dataset
     -new test dataset
     """
-    
-    if not dataloader:
-        train_dataset = [train_dataset]
-        test_dataset = [test_dataset]
         
     new_train_input, new_train_target, new_test_input, new_test_target = generate_newdataset(train_dataset, test_dataset, split)
     
