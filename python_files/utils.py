@@ -143,35 +143,73 @@ def one_hot_embedding(labels, num_classes):
 #######################################################################################  
 
 def diagnostic_plots(model, train_dataset, test_dataset):
-    positive_train = model(train_dataset[0][train_dataset[1] == 1]).detach().cpu().numpy()
-    negative_train = model(train_dataset[0][train_dataset[1] == 0]).detach().cpu().numpy()
-
-    positive_test = model(test_dataset[0][test_dataset[1] == 1]).detach().cpu().numpy()
-    negative_test = model(test_dataset[0][test_dataset[1] == 0]).detach().cpu().numpy()
-
-    print("false negative percentage :", 100 - 100*positive_test.argmax(1).sum()/positive_test.shape[0])
-    print("false positive percentage :", 100*negative_test.argmax(1).sum()/negative_test.shape[0])
     
-    f, axs = plt.subplots(2,2,figsize=(15,15))
-    sns.set_style('whitegrid')
-    g = sns.kdeplot(positive_train[:, 1]-positive_train[:, 0], bw=0.1, label='target=1', ax=axs[0,0])
-    sns.kdeplot(negative_train[:, 1]-negative_train[:, 0], bw=0.1, ax=g, label='target=0')
-    axs[0,0].set_title('Distribution train set')
+    with torch.no_grad():
+        #get type of target and model output
+        sample_target = next(iter(train_dataset))[1].cuda().new()
+        sample_output = model(next(iter(train_dataset))[0].cuda()).new()
 
-    sns.set_style('whitegrid')
-    g = sns.kdeplot(positive_test[:, 1]-positive_test[:, 0], bw=0.1, label='target=1', ax=axs[0,1])
-    sns.kdeplot(negative_test[:, 1]-negative_test[:, 0], bw=0.1, ax=g, label='target=0')
-    axs[0,1].set_title('Distribution test set')
-    
-    fpr_train, tpr_train, threshold_train = roc_curve(train_dataset[1], model(train_dataset[0]).detach().cpu().numpy()[:,1])
-    axs[1,0].plot(fpr_train, tpr_train)
-    axs[1,0].set_title('ROC of train set')
-    axs[1,0].set_xlabel('False Positive Rate')
-    axs[1,0].set_ylabel('True Positive Rate')
-    
-    fpr_test, tpr_test, threshold_train = roc_curve(test_dataset[1], model(test_dataset[0]).detach().cpu().numpy()[:,1])
-    axs[1,1].plot(fpr_test, tpr_test)
-    axs[1,1].set_title('ROC of test set')
-    axs[1,1].set_xlabel('False Positive Rate')
-    axs[1,1].set_ylabel('True Positive Rate')
-    plt.show()
+        positive_train = Tensor(sample_output)
+        negative_train = Tensor(sample_output)
+
+        positive_test = Tensor(sample_output)
+        negative_test = Tensor(sample_output)
+
+        targets_train = sample_target.new()
+        targets_test = sample_target.new()
+
+        scores_train = Tensor(sample_output)
+        scores_test = Tensor(sample_output)
+
+        for train_batch, test_batch in zip(train_dataset, test_dataset):
+            if torch.cuda.is_available():
+                train_batch[0] = train_batch[0].cuda()
+                train_batch[1] = train_batch[1].cuda()
+                test_batch[0] = test_batch[0].cuda()
+                test_batch[1] = test_batch[1].cuda()
+
+            positive_train = torch.cat((positive_train, model(train_batch[0][train_batch[1] == 1])))
+            negative_train = torch.cat((negative_train, model(train_batch[0][train_batch[1] == 0])))
+
+            positive_test = torch.cat((positive_test, model(test_batch[0][test_batch[1] == 1])))
+            negative_test = torch.cat((negative_test, model(test_batch[0][test_batch[1] == 0])))
+
+            targets_train = torch.cat((targets_train, train_batch[1]))
+            targets_test = torch.cat((targets_test, test_batch[1]))
+
+            scores_train = torch.cat((scores_train, model(train_batch[0])))
+            scores_test = torch.cat((scores_test, model(test_batch[0])))
+
+
+        positive_train = positive_train.detach().cpu().numpy()
+        negative_train = negative_train.detach().cpu().numpy()
+
+        positive_test = positive_test.detach().cpu().numpy()
+        negative_test = negative_test.detach().cpu().numpy() 
+
+        print("false negative percentage :", 100 - 100*positive_test.argmax(1).sum()/positive_test.shape[0])
+        print("false positive percentage :", 100*negative_test.argmax(1).sum()/negative_test.shape[0])
+
+        f, axs = plt.subplots(2,2,figsize=(15,15))
+        sns.set_style('whitegrid')
+        g = sns.kdeplot(positive_train[:, 1]-positive_train[:, 0], bw=0.1, label='target=1', ax=axs[0,0])
+        sns.kdeplot(negative_train[:, 1]-negative_train[:, 0], bw=0.1, ax=g, label='target=0')
+        axs[0,0].set_title('Distribution train set')
+
+        sns.set_style('whitegrid')
+        g = sns.kdeplot(positive_test[:, 1]-positive_test[:, 0], bw=0.1, label='target=1', ax=axs[0,1])
+        sns.kdeplot(negative_test[:, 1]-negative_test[:, 0], bw=0.1, ax=g, label='target=0')
+        axs[0,1].set_title('Distribution test set')
+
+        fpr_train, tpr_train, threshold_train = roc_curve(targets_train, scores_train.detach().cpu().numpy()[:,1])
+        axs[1,0].plot(fpr_train, tpr_train)
+        axs[1,0].set_title('ROC of train set')
+        axs[1,0].set_xlabel('False Positive Rate')
+        axs[1,0].set_ylabel('True Positive Rate')
+
+        fpr_test, tpr_test, threshold_train = roc_curve(targets_test, scores_test.detach().cpu().numpy()[:,1])
+        axs[1,1].plot(fpr_test, tpr_test)
+        axs[1,1].set_title('ROC of test set')
+        axs[1,1].set_xlabel('False Positive Rate')
+        axs[1,1].set_ylabel('True Positive Rate')
+        plt.show()

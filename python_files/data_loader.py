@@ -174,6 +174,8 @@ def generate_newdataset(train_dataset, test_dataset, split=0.7):
     if train_input.is_cuda:
         g_train_target = g_train_target.cuda()
         g_test_target = g_test_target.cuda()
+        
+    del train_input, train_target, test_input, test_target
     
     return g_train_input, g_train_target, g_test_input, g_test_target
 
@@ -211,6 +213,7 @@ def get_snapshots_f(model, layers, layer_names, data, dataloader=False, flatten=
                 outputs = torch.cat((outputs, output), 0)
         
         remove_spying(handle_d)
+        del output_d, handle_d
                 
         return outputs
     
@@ -272,52 +275,54 @@ def generate_dataloader_g(model, train_dataset, test_dataset, layers, layer_name
     -new test dataset
     """
     
-    train_loader = None
-    test_loader = None
-    
-    for train_batch, test_batch in tqdm(zip(train_dataset, test_dataset)):
-        new_train_input, new_train_target, new_test_input, new_test_target = generate_newdataset(train_batch, test_batch, split)
+    with torch.no_grad():
         
-        if torch.cuda.is_available():
-            new_train_input = new_train_input.cuda()
-            new_test_input = new_test_input.cuda()
+        train_loader = None
+        test_loader = None
 
-        g_train_input = get_snapshots_f(model, layers, layer_names, new_train_input)
-        g_test_input = get_snapshots_f(model, layers, layer_names, new_test_input)
+        for train_batch, test_batch in tqdm(zip(train_dataset, test_dataset)):
+            new_train_input, new_train_target, new_test_input, new_test_target = generate_newdataset(train_batch, test_batch, split)
 
-        if not full:
-            idx_train = torch.randperm(g_train_input.shape[0])
-            idx_test = torch.randperm(g_test_input.shape[0])
-            if(g_train_input.is_cuda): 
-                idx_train = idx_train.cuda()
-                idx_test = idx_test.cuda()
+            if torch.cuda.is_available():
+                new_train_input = new_train_input.cuda()
+                new_test_input = new_test_input.cuda()
 
-            g_train_input = g_train_input[idx_train].narrow(0, 0, 1000)
-            new_train_target = new_train_target[idx_train].narrow(0, 0, 1000)
-            g_test_input = g_test_input[idx_test].narrow(0, 0, 1000)
-            new_test_target = new_test_target[idx_test].narrow(0, 0, 1000)
+            g_train_input = get_snapshots_f(model, layers, layer_names, new_train_input)
+            g_test_input = get_snapshots_f(model, layers, layer_names, new_test_input)
 
-        g_train_input = g_train_input.unsqueeze(1).type_as(new_train_input)
-        #new_train_target = new_train_target.type_as(new_train_traget)
+            if not full:
+                idx_train = torch.randperm(g_train_input.shape[0])
+                idx_test = torch.randperm(g_test_input.shape[0])
+                if(g_train_input.is_cuda): 
+                    idx_train = idx_train.cuda()
+                    idx_test = idx_test.cuda()
 
-        g_test_input = g_test_input.unsqueeze(1).type_as(new_test_input)
-        #new_test_target = new_test_target.type_as(new_test_target)
-        
-        g_train_input = g_train_input.cpu()
-        new_train_target = new_train_target.long().cpu()
-        g_test_input = g_test_input.cpu()
-        new_test_target = new_test_target.long().cpu()
- 
-        if train_loader is None:
-            train_loader = TensorDataset(g_train_input, new_train_target)
-            test_loader = TensorDataset(g_test_input, new_test_target)
-        else:
-            train_loader = ConcatDataset([train_loader, TensorDataset(g_train_input, new_train_target)])
-            test_loader = ConcatDataset([test_loader, TensorDataset(g_test_input, new_test_target)])
-            
-        del g_train_input, g_test_input, new_train_target, new_test_target
-            
-    return train_loader, test_loader
+                g_train_input = g_train_input[idx_train].narrow(0, 0, 1000)
+                new_train_target = new_train_target[idx_train].narrow(0, 0, 1000)
+                g_test_input = g_test_input[idx_test].narrow(0, 0, 1000)
+                new_test_target = new_test_target[idx_test].narrow(0, 0, 1000)
+
+            #g_train_input = g_train_input.unsqueeze(1).type_as(new_train_input)
+            #new_train_target = new_train_target.type_as(new_train_traget)
+
+            #g_test_input = g_test_input.unsqueeze(1).type_as(new_test_input)
+            #new_test_target = new_test_target.type_as(new_test_target)
+
+            g_train_input = g_train_input.cpu()
+            new_train_target = new_train_target.long().cpu()
+            g_test_input = g_test_input.cpu()
+            new_test_target = new_test_target.long().cpu()
+
+            if train_loader is None:
+                train_loader = TensorDataset(g_train_input, new_train_target)
+                test_loader = TensorDataset(g_test_input, new_test_target)
+            else:
+                train_loader = ConcatDataset([train_loader, TensorDataset(g_train_input, new_train_target)])
+                test_loader = ConcatDataset([test_loader, TensorDataset(g_test_input, new_test_target)])
+
+            del g_train_input, g_test_input, new_train_target, new_test_target, new_train_input, new_test_input
+
+        return train_loader, test_loader
 
 
 def generate_dataset_g_per_class(model, train_dataset, test_dataset, layers, layer_names, split=0.7, full=True):
