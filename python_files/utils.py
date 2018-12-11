@@ -9,7 +9,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import pickle
 import seaborn as sns
-from sklearn.metrics import roc_curve
+from sklearn.metrics import roc_curve,roc_auc_score
 
 from model_trainer import ModelTrainer
 from history import History
@@ -142,7 +142,7 @@ def one_hot_embedding(labels, num_classes):
 
 #######################################################################################  
 
-def diagnostic_plots(model, train_dataset, test_dataset):
+def diagnostic_plots(model, train_dataset, test_dataset, bw=0.1, savefig=False):
     
     with torch.no_grad():
         #get type of target and model output
@@ -186,30 +186,47 @@ def diagnostic_plots(model, train_dataset, test_dataset):
 
         positive_test = positive_test.detach().cpu().numpy()
         negative_test = negative_test.detach().cpu().numpy() 
+        
+        targets_train = targets_train.detach().cpu().numpy()
+        targets_test = targets_test.detach().cpu().numpy()
+
+        scores_train = scores_train.detach().cpu().numpy()
+        scores_test = scores_test.detach().cpu().numpy()
 
         print("false negative percentage :", 100 - 100*positive_test.argmax(1).sum()/positive_test.shape[0])
         print("false positive percentage :", 100*negative_test.argmax(1).sum()/negative_test.shape[0])
 
         f, axs = plt.subplots(2,2,figsize=(15,15))
         sns.set_style('whitegrid')
-        g = sns.kdeplot(positive_train[:, 1]-positive_train[:, 0], bw=0.1, label='target=1', ax=axs[0,0])
-        sns.kdeplot(negative_train[:, 1]-negative_train[:, 0], bw=0.1, ax=g, label='target=0')
+        g = sns.kdeplot(positive_train[:, 1]-positive_train[:, 0], bw=bw, label='target=1', ax=axs[0,0])
+        sns.kdeplot(negative_train[:, 1]-negative_train[:, 0], bw=bw, ax=g, label='target=0')
         axs[0,0].set_title('Distribution train set')
 
         sns.set_style('whitegrid')
-        g = sns.kdeplot(positive_test[:, 1]-positive_test[:, 0], bw=0.1, label='target=1', ax=axs[0,1])
-        sns.kdeplot(negative_test[:, 1]-negative_test[:, 0], bw=0.1, ax=g, label='target=0')
+        g = sns.kdeplot(positive_test[:, 1]-positive_test[:, 0], bw=bw, label='target=1', ax=axs[0,1])
+        sns.kdeplot(negative_test[:, 1]-negative_test[:, 0], bw=bw, ax=g, label='target=0')
         axs[0,1].set_title('Distribution test set')
 
-        fpr_train, tpr_train, threshold_train = roc_curve(targets_train, scores_train.detach().cpu().numpy()[:,1])
+        fpr_train, tpr_train, threshold_train = roc_curve(targets_train, scores_train[:,1])
+        roc_score_train = roc_auc_score(targets_train, scores_train[:,1])
         axs[1,0].plot(fpr_train, tpr_train)
+        axs[1,0].plot([0,1], [0,1], 'k--', lw=0.6)
         axs[1,0].set_title('ROC of train set')
         axs[1,0].set_xlabel('False Positive Rate')
         axs[1,0].set_ylabel('True Positive Rate')
 
-        fpr_test, tpr_test, threshold_train = roc_curve(targets_test, scores_test.detach().cpu().numpy()[:,1])
+        fpr_test, tpr_test, threshold_train = roc_curve(targets_test, scores_test[:,1])
+        roc_score_test = roc_auc_score(targets_test, scores_test[:,1])
         axs[1,1].plot(fpr_test, tpr_test)
+        axs[1,1].plot([0,1], [0,1], 'k--', lw=0.6)
         axs[1,1].set_title('ROC of test set')
         axs[1,1].set_xlabel('False Positive Rate')
         axs[1,1].set_ylabel('True Positive Rate')
+        
+        if savefig:
+            plt.savefig("G_diagnostic", dpi=300)
         plt.show()
+        
+        print()
+        print("ROC score train :", roc_score_train)
+        print("ROC score test :", roc_score_test)
