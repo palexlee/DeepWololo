@@ -259,7 +259,7 @@ def generate_dataset_g(model, train_dataset, test_dataset, layers, layer_names, 
     
     return (g_train_input, new_train_target), (g_test_input, new_test_target)
 
-def generate_dataloader_g(model, train_dataset, test_dataset, layers, layer_names, split=0.7, full=True, pin=False, batch_size=1):
+def generate_dataloader_g(model, train_dataset, test_dataset, layers, layer_names, split=0.7, full=True, pin=False, batch_size=1, dim=None, axis=1):
     """
     Generate the dataset for g with the values spied from the given layers as input and the
     labels taking value '1' if the original data was part of the train set, '0' otherwise.
@@ -270,6 +270,8 @@ def generate_dataloader_g(model, train_dataset, test_dataset, layers, layer_name
     -layers: Array containing the model layers to spy on
     -layer_name: Array containing the names of the layer, to be used as keys in the returned
     -split: Percentage of data to keep for the new train dataset
+    -dim: number of dimension to keep
+    -axis: axis into which to crop
     Returns:
     -new train dataset
     -new test dataset
@@ -307,6 +309,16 @@ def generate_dataloader_g(model, train_dataset, test_dataset, layers, layer_name
 
             #g_test_input = g_test_input.unsqueeze(1).type_as(new_test_input)
             #new_test_target = new_test_target.type_as(new_test_target)
+            #print(g_train_input.shape)
+            if dim is not None:
+                if dim > g_train_input.shape[axis]:
+                    raise ValueError('invalid dim')
+                    
+                center = int(g_train_input.shape[axis]/2)
+                start = int(center - dim/2)
+                g_train_input = g_train_input.narrow(axis, start, dim)
+                g_test_input= g_test_input.narrow(axis, start, dim)
+                #print(g_train_input.shape)
 
             g_train_input = g_train_input.cpu()
             new_train_target = new_train_target.long().cpu()
