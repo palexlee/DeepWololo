@@ -271,7 +271,7 @@ def generate_dataloader_g(model, train_dataset, test_dataset, layers, layer_name
     -layer_name: Array containing the names of the layer, to be used as keys in the returned
     -split: Percentage of data to keep for the new train dataset
     -dim: number of dimension to keep
-    -axis: axis into which to crop
+    -axis: axis into which to crop, 1:channels, 2:images
     Returns:
     -new train dataset
     -new test dataset
@@ -316,8 +316,13 @@ def generate_dataloader_g(model, train_dataset, test_dataset, layers, layer_name
                     
                 center = int(g_train_input.shape[axis]/2)
                 start = int(center - dim/2)
+                
                 g_train_input = g_train_input.narrow(axis, start, dim)
                 g_test_input= g_test_input.narrow(axis, start, dim)
+                if axis==2:
+                    g_train_input = g_train_input.narrow(3, start, dim)
+                    g_test_input= g_test_input.narrow(3, start, dim)
+                    
                 #print(g_train_input.shape)
 
             g_train_input = g_train_input.cpu()
