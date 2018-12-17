@@ -28,13 +28,13 @@ def debug_layers_dims(model, input_shape, headers=True):
             print("******************** Debugging layers sizes: ********************")
         print("input_shape= (_,{})".format(",".join(map(str,input_shape[1:]))))
         out = torch.rand(2, *input_shape[1:])    
-        for m in list(model.modules())[1:]:
+        for i, m in enumerate(list(model.modules())[1:]):
             if type(m)==nn.Sequential:
                 print("**************************************")
                 out = debug_layers_dims(m, out.shape, False)
             else:
                 print("------------------")
-                print(m)
+                print("[{}]:".format(i), m)
                 tmp = m(out)
                 outs = "(_,{})".format(",".join(map(str, out.shape[1:]))) if type(out)==Tensor else "???"
                 tmps = "(_,{})".format(",".join(map(str, tmp.shape[1:]))) if type(tmp)==Tensor else "???"
