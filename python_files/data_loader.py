@@ -282,6 +282,8 @@ def generate_dataloader_g(model, train_dataset, test_dataset, layers, layer_name
         
         train_loader = None
         test_loader = None
+        
+        rand_channels_defined = False
 
         for train_batch, test_batch in tqdm(zip(train_dataset, test_dataset)):
             new_train_input, new_train_target, new_test_input, new_test_target = generate_newdataset(train_batch, test_batch, split)
@@ -314,16 +316,26 @@ def generate_dataloader_g(model, train_dataset, test_dataset, layers, layer_name
             if dim is not None:
                 if dim > g_train_input.shape[axis]:
                     raise ValueError('invalid dim')
-                    
-                center = int(g_train_input.shape[axis]/2)
-                start = int(center - dim/2)
                 
-                g_train_input = g_train_input.narrow(axis, start, dim)
-                g_test_input= g_test_input.narrow(axis, start, dim)
                 if axis==2:
+                    center = int(g_train_input.shape[2]/2)
+                    start = int(center - dim/2)
+
+                    g_train_input = g_train_input.narrow(2, start, dim)
+                    g_test_input= g_test_input.narrow(2, start, dim)
+                
                     g_train_input = g_train_input.narrow(3, start, dim)
                     g_test_input= g_test_input.narrow(3, start, dim)
-            
+                elif axis==1:
+                    if not rand_channels_defined:
+                        rand_channels = torch.randperm(g_train_input.size(1))[:dim]
+                        print("picked", dim, "channels out of", g_train_input.size(1), ":\n", rand_channels)
+                        rand_channels_defined = True
+                    g_train_input = g_train_input[:,rand_channels]
+                    g_test_input = g_test_input[:,rand_channels]
+                else:
+                    raise ValueError('invalid axis')
+
             new_train_target = new_train_target.long()
             new_test_target = new_test_target.long()
             
