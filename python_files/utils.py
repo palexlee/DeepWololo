@@ -142,7 +142,7 @@ def one_hot_embedding(labels, num_classes):
 
 #######################################################################################  
 
-def diagnostic_plots(model, train_dataset, test_dataset, bw=0.1, savefig=False):
+def diagnostic_plots(model, train_dataset, test_dataset, bw=0.1, dataset_name=None, savefig=False):
     
     with torch.no_grad():
         #get type of target and model output
@@ -195,8 +195,14 @@ def diagnostic_plots(model, train_dataset, test_dataset, bw=0.1, savefig=False):
 
         print("false negative percentage :", 100 - 100*positive_test.argmax(1).sum()/positive_test.shape[0])
         print("false positive percentage :", 100*negative_test.argmax(1).sum()/negative_test.shape[0])
+        
+        if dataset_name is None:
+            title = 'Diagnostic plot'
+        else:
+            title = 'Diagnostic plot for ' + dataset_name
 
         f, axs = plt.subplots(2,2,figsize=(15,15))
+        f.suptitle(title)
         sns.set_style('whitegrid')
         g = sns.kdeplot(positive_train[:, 1]-positive_train[:, 0], bw=bw, label='target=1', ax=axs[0,0])
         sns.kdeplot(negative_train[:, 1]-negative_train[:, 0], bw=bw, ax=g, label='target=0')
@@ -223,8 +229,11 @@ def diagnostic_plots(model, train_dataset, test_dataset, bw=0.1, savefig=False):
         axs[1,1].set_xlabel('False Positive Rate')
         axs[1,1].set_ylabel('True Positive Rate')
         
+        f.tight_layout()
+        f.subplots_adjust(top=0.95)
+        
         if savefig:
-            plt.savefig("G_diagnostic", dpi=300)
+            plt.savefig(title.replace(' ', '_'), dpi=300, bbox_inches='tight')
         plt.show()
         
         print()
