@@ -22,9 +22,9 @@ class LeNet(nn.Module):
         x = self.fc2(x)
         return x
     
-class LeoNet(nn.Module):
+class AlmostLeNet(nn.Module):
     def __init__(self):
-        super(LeoNet, self).__init__()
+        super(AlmostLeNet, self).__init__()
         self.conv1 = nn.Conv2d(1, 16, kernel_size = 5)
         self.mxp1 = nn.MaxPool2d(kernel_size = 4)
         self.view = View([-1])
